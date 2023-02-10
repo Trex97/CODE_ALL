@@ -1,0 +1,592 @@
+Primary Key = ตัวแปรที่เป็น main หลักใน ตารางนั้นๆ โดยข้อมูลของตัวแปร Primary Key จะไม่ซ้ำกันเช่น เลขที่ 
+
+Foreign Key = ตัวแปรร่วม ข้อมูลซ้ำได้ ไม่ได้เป็นคีย์หลัก 
+
+web site Data grip = ใช้สร้าง ER diagram 
+
+ควรจัดการข้อมูลด้วย WHER ก่อน เพื่อให้ข้อมูลมีขนาดเล็กลง และตรงตามที่ต้องการ ก่อนนะนำไปใช้กับคำสั่ง GROUP BY, ORDER BY 
+
+```sql
+*CREATE TABLE *
+CREATE TABLE customer(
+	id int,
+	name text, 
+	city text,
+	email text,
+	avg_spending real
+);
+
+การสร้าง TABLE จากข้อมูลที่มีอยู่แล้ว + เงื่อนไขเพิ่มเติม 
+
+ALTER TABLE tmp_eclaim_hitap_20220906 RENAME TO TELEMED ;
+SELECT * FROM TELEMED  ;
+CREATE TABLE TELEMED_only AS 
+SELECT 
+		* 
+FROM TELEMED 
+WHERE SUB_FUND = 'TELEMED' ;
+
+*INSERT DATA* 
+INSERT INTO customer VALUES
+(1,"toy","BKK","toy@hotmail.com",500.25)
+(2,"AU","nonthaburi","AU@hotmail.com",100)
+
+*DROP TABLE*
+DROP TABLE customer;  -ต้องดูดีๆ ลบแล้วไม่สามารถดึงกลับมาได้- 
+
+*SELECT* ใช้ดึงข้อมูล
+*FROM*
+*WHERE* ใช้ filter row
+*GROUP BY* ใช้ในการทำสถิติเบื้องต้น
+*HAVING* ใช้ filter กลุ่ม 
+*ORDER BY* ใช้ sort ข้อมูล 
+
+```
+
+```sql
+*SELECT* ใช้ดึงข้อมูล
+
+SELECT * FROM customer;
+
+SELECT  
+	firstname AS name, *AS คือการเปลี่ยนชื่อตัวแปรใหม่* 
+	lastname AS name,
+	country,
+	email 
+FROM cutomer ;
+```
+
+```sql
+CHINOOK.db
+
+SELECT 
+firstname,
+lastname
+FROM customers; 
+
+SELECT 
+c.firstname,
+c.lastname,
+firstname ||' ' || lastname AS fullname, --การเชื่อมข้อมูลออกมาเป็นตัวแปรใหม่ 
+c.country,
+c.email
+FROM customers; 
+
+SELECT 
+	name AS track_name,
+	millisecond/60000.0 AS miniute , --ถ้าอยากได้ข้อมูลที่เป็นทศนิยมให้หารด้วย realnumber หรือก็คือใส่เลขทศนิยมลงไปหาร
+	bytes
+FROM tracks;
+
+SELECT 
+	name AS track_name,
+	ROUND(millisecond/60000.0, 2) AS miniute , --ROUND คือการปรับทศนิยมให้ได้ตามที่ต้องการ
+	ROUND(bytes/ (1024*1024.0),4) AS mb
+FROM tracks;
+
+SELECT 
+	firstname,
+	company,
+	country,
+	email
+FROM customers
+WHERE country = 'USA' OR country = 'France' OR country = 'Brazil'; 
+
+SELECT 
+	firstname,
+	company,
+	country,
+	email
+FROM customers
+WHERE LOWER (country) in('USA','France','Brazil'); 
+
+SELECT 
+	firstname,
+	company,
+	country,
+	email
+FROM customers
+WHERE UPPER (country) in('USA','France','Brazil')
+AND (email LIKE '%@google.com') OR (email LIKE '%@microsoft%');  --ใส่วงเล็บเพื่อให้ดูง่าย
+
+SELECT 
+	name,
+	Milliseconds/60000.0 AS miniute 
+FROM tracks; 
+
+SELECT 
+	name,
+	Milliseconds/60000.0 AS miniute 
+FROM tracks
+WHERE (Milliseconds/60000.0) < 3.0 ;
+
+SELECT 
+	name,
+	Milliseconds/60000.0 AS miniute 
+FROM tracks
+WHERE miniute < 3.0 ;  -- <>: ไม่เท่ากับ =: เท่ากับ <=: น้อยกว่าเท่ากับ >=: มากกว่าเท่ากับ
+
+SELECT 
+	name,
+	Milliseconds/60000.0 AS miniutes,
+	Bytes/(1024*1024.0) AS mb
+FROM tracks
+WHERE  Bytes/(1024*1024.0) BETWEEN 10 AND 15; --ดึงข้อมูลที่มีคำจุ 10-15
+
+-- Aggregate functions -- min, max,  count, sum ,avg
+SELECT 
+	AVG(bytes/1000000.0) AS avg_mb,
+	SUM(bytes/1000000.0) AS SUM_mb,
+	COUNT(bytes),
+	COUNT (*) , 
+	MIN (bytes) , 
+	MAX (bytes)
+FROM tracks;
+
+```
+
+```sql
+-- การเขียน sub-query  
+1.
+SELECT avg_mb, SUM_mb FROM (
+	SELECT 
+		AVG(bytes/1000000.0) AS avg_mb,
+		SUM(bytes/1000000.0) AS SUM_mb,
+		COUNT(bytes),
+		COUNT (*) , 
+		MIN (bytes) , 
+		MAX (bytes)
+	FROM tracks
+) ;
+
+2.
+SELECT 
+		AVG(mb) AS avg_mb,
+		SUM(mb) AS SUM_mb,
+		COUNT(mb) AS count_mb,
+		COUNT (*) , 
+		MIN (mb) AS min_mb,
+		MAX (mb) AS max_mb
+FROM (
+	SELECT 
+		bytes/(1024*1024.0) AS mb
+	FROM tracks
+) AS sub;
+
+1.
+SELECT 
+	* 
+FROM customers
+WHERE UPPER (country) = 'USA';
+
+2.
+SELECT 
+	firstname,
+	State,
+	country,
+	email
+FROM (
+	SELECT 
+		* 
+	FROM customers
+	WHERE UPPER (country) = 'USA'
+) AS sub 
+WHERE State = 'NY' ;
+
+การปประกาศตัวแปร common expression
+WITH ..... AS (คำสั่ง)
+
+-----------------------------------
+WITH sub_customer_USA AS (
+		SELECT * 
+		FROM customers
+		WHERE UPPER (country) = 'USA'
+)
+SELECT 
+	firstname,
+	lastname,
+	state,
+	email,
+	country 
+FROM sub_customer_USA
+WHERE state = 'NY';
+-----------------------------------
+```
+
+```sql
+การเชื่อมข้อมูล TABLE  ที่มี Primary key หรือเลขที่ เหมือนหัน โดยใช้ Join
+
+SELECT * 
+FROM artists JOIN albums 
+	ON artists,artistId = albums,ArtisId ; 
+
+SELECT * 
+FROM artists  AS ar
+JOIN albums AS alb
+	ON ar.ArtistId = alb.ArtistId ;
+
+ทำข้อมูลหลังจกาการเชื่อมแล้วขึ้นตัวด้วยตัว C 
+SELECT 
+	ar.name,
+	alb.title
+FROM artists  AS ar
+JOIN albums AS alb
+	ON ar.ArtistId = alb.ArtistId 
+WHERE UPPER(ar.name) LIKE 'C%' ;
+```
+
+```sql
+สำหรับดูข้อมูล การแปลงวันที่ SQL >> https://www.sqlite.org/lang_datefunc.html
+ใช้ command STRFTIME  โดยที่ข้อมูลก่อนจะแปลงอยู่ในรูปแบบ TEXT เช่น 2009-01-09 สำคัญมากต้องอยู่ใน format นี้เท่านั้น "YYYY-MM-DD"
+ถ้าเป็น data base อื่นใช้ google หาคำสั่ง extract
+
+SELECT 
+	InvoiceDate ,
+	STRFTIME ('%Y',InvoiceDate) AS year,
+	STRFTIME ('%m',InvoiceDate) AS month,
+	STRFTIME ('%d',InvoiceDate) AS day,
+	STRFTIME ('%Y%m%d',InvoiceDate) AS visite
+FROM invoices ;
+
+SELECT 
+	InvoiceDate ,
+	STRFTIME ('%Y',InvoiceDate) AS year,
+	STRFTIME ('%m',InvoiceDate) AS month,
+	STRFTIME ('%d',InvoiceDate) AS day,
+	STRFTIME ('%Y%m',InvoiceDate) AS monthID
+FROM invoices 
+WHERE STRFTIME ('%Y%m',InvoiceDate) > '201003'; -- กรองเรื่องเวลา 
+
+SELECT 
+	InvoiceDate ,
+	STRFTIME ('%Y',InvoiceDate) AS year,
+	STRFTIME ('%m',InvoiceDate) AS month,
+	STRFTIME ('%d',InvoiceDate) AS day,
+	STRFTIME ('%Y%m',InvoiceDate) AS monthID
+FROM invoices 
+WHERE STRFTIME ('%Y%m',InvoiceDate) BETWEEN '201001' AND '201009'; -- ประยุกต์ใช้ BETWEEN เข้ากับช่วงเวลา 
+
+```
+
+```sql
+-- ใช้ sub query ในการจัดการ 2 ชุดข้อมูล เชื่อมเข้าด้วยกัน  --
+with sub1_monthID AS (
+	SELECT 
+		InvoiceDate ,
+		CustomerId,
+		invoices.Total,
+		STRFTIME ('%Y',InvoiceDate) AS year,
+		STRFTIME ('%m',InvoiceDate) AS month,
+		STRFTIME ('%d',InvoiceDate) AS day,
+		STRFTIME ('%Y%m',InvoiceDate) AS monthID
+	FROM invoices 
+	WHERE STRFTIME ('%Y',InvoiceDate)  = '2010'
+), sub2_customer_usa AS (
+	SELECT 
+		CustomerId,
+		FirstName,
+		LastName
+	FROM customers
+	WHERE Country = 'USA'
+)
+SELECT * 
+FROM sub2_customer_USA AS u JOIN sub1_monthID AS i
+	ON u.CustomerId = i.CustomerId ;
+
+-- group by ข้อมูล ที่ sub query มา
+with sub1_monthID AS (
+	SELECT 
+		InvoiceDate ,
+		CustomerId,
+		invoices.Total,
+		STRFTIME ('%Y',InvoiceDate) AS year,
+		STRFTIME ('%m',InvoiceDate) AS month,
+		STRFTIME ('%d',InvoiceDate) AS day,
+		STRFTIME ('%Y%m',InvoiceDate) AS monthID
+	FROM invoices 
+	WHERE STRFTIME ('%Y',InvoiceDate)  = '2010'
+), sub2_customer_usa AS (
+	SELECT 
+		CustomerId,
+		FirstName,
+		LastName
+	FROM customers
+	WHERE Country = 'USA'
+)
+SELECT 
+	u.CustomerId, 
+	u.FirstName, 
+	u.LastName,
+	SUM (i.total)
+FROM sub2_customer_USA AS u JOIN sub1_monthID AS i
+	ON u.CustomerId = i.CustomerId 
+GROUP BY u.CustomerId, u.FirstName, u.LastName 
+ORDER By SUM (i.total) DESC ;
+
+/*
+with sub1_monthID AS (
+	SELECT 
+		InvoiceDate ,
+		CustomerId,
+		invoices.Total,
+		STRFTIME ('%Y',InvoiceDate) AS year,
+		STRFTIME ('%m',InvoiceDate) AS month,
+		STRFTIME ('%d',InvoiceDate) AS day,
+		STRFTIME ('%Y%m',InvoiceDate) AS monthID
+	FROM invoices 
+	WHERE STRFTIME ('%Y',InvoiceDate)  = '2010'
+), sub2_customer_usa AS (
+	SELECT 
+		CustomerId,
+		FirstName,
+		LastName
+	FROM customers
+	WHERE Country = 'USA'
+)
+SELECT 
+	u.CustomerId, 
+	u.FirstName, 
+	u.LastName,
+	SUM (i.total)
+FROM sub2_customer_USA AS u JOIN sub1_monthID AS i
+	ON u.CustomerId = i.CustomerId 
+GROUP BY 1,2,3.  -- สามารถใช้ตัวเลขคอลัม แทนชื่อของตัวแปร
+ORDER By 4 DESC ;-- สามารถใช้ตัวเลขคอลัม แทนชื่อของตัวแปร
+*/
+```
+
+```sql
+การใช้ คำสั่ง CASE ใน SQL คล้ายกับคำสั่ง IF ใน EXCEL 
+
+CASE
+	WHEN -> THEN 
+	ELSE
+END
+
+WITH sub1 AS (
+	SELECT 
+		country,
+		CASE
+			WHEN country IN ('USA', 'Canada') THEN 'North America'
+			WHEN country IN ('Italy','Belgium','Germany','Denmark','Protugal') THEN 'Europe'
+			ELSE 'Other Regions'
+		END AS regions
+	FROM customers 
+)
+SELECT 
+	regions,
+	count(*) AS n_customer
+FROM sub1
+GROUP BY regions
+ORDER BY n_customer DESC ;
+```
+
+```sql
+การจัดการกับค่า NULL 
+1. ใช้คำสั่ง COALESCE 
+2. ใช้ CASE WHEN 
+
+SELECT 
+	FirstName,
+	LastName,
+	company,
+FROM customers
+WHERE company IS NULL;
+
+SELECT 
+	FirstName,
+	LastName,
+	company,
+FROM customers
+WHERE company IS NOT NULL;
+
+SELECT 
+	*,
+	COALESCE (company, 'END'), -- กำหนดแค่ค่าที่ต้องการหากข้อมูลเดป็ร NULL 
+	CASE 
+		WHEN Company is NULL THEN '0'
+		ELSE '1'
+	END AS 'segment'
+FROM customers;
+```
+
+```sql
+การใช้คำสั่ง Join TABLE มากกว่า 2  
+
+SELECT 
+	at.name AS artis_name,
+	ab.Title,
+	tr.name AS track_name, 
+	tr.Milliseconds,
+	tr.bytes,
+	g.Name AS genre_name
+FROM artists AS at 
+JOIN albums AS ab ON at.ArtistId = ab.ArtistId 
+JOIN tracks AS  tr ON tr.AlbumId = ab.AlbumId
+JOIN genres AS  g ON g.GenreId = tr.GenreId
+;
+
+การใช้ Sub-query กับ การ Join 
+WITH sub1 AS (
+	SELECT 
+		at.name AS artis_name,
+		ab.Title,
+		tr.name AS track_name, 
+		tr.Milliseconds,
+		tr.bytes,
+		g.Name AS genre_name
+	FROM artists AS at 
+	JOIN albums AS ab ON at.ArtistId = ab.ArtistId 
+	JOIN tracks AS  tr ON tr.AlbumId = ab.AlbumId
+	JOIN genres AS  g ON g.GenreId = tr.GenreId
+)
+SELECT 
+	COUNT (*),
+	genre_name
+FROM sub1 
+GROUP BY genre_name
+ORDER BY 1 DESC
+;
+```
+
+```sql
+การใช้ HAVING 
+คำสั่ง HAVING = การกรองข้อมูลหลังจาก คำสั่ง  GROUP BY 
+
+WITH sub1 AS (
+	SELECT 
+		at.name AS artis_name,
+		ab.Title,
+		tr.name AS track_name, 
+		tr.Milliseconds,
+		tr.bytes,
+		g.Name AS genre_name
+	FROM artists AS at 
+	JOIN albums AS ab ON at.ArtistId = ab.ArtistId 
+	JOIN tracks AS  tr ON tr.AlbumId = ab.AlbumId
+	JOIN genres AS  g ON g.GenreId = tr.GenreId
+)
+SELECT 
+	COUNT (*),
+	genre_name
+FROM sub1 
+GROUP BY genre_name
+HAVING COUNT (*) >100 
+ORDER BY 1 DESC
+;
+```
+
+```sql
+> เขียนเอง < ใช้ SQL ทำงานจริง 
+
+ALTER TABLE tmp_eclaim_hitap_20220906 RENAME TO TELEMED ;
+SELECT * FROM TELEMED  ; 
+
+CREATE TABLE TELEMED_only AS 
+SELECT 
+		* 
+FROM TELEMED 
+WHERE SUB_FUND = 'TELEMED' ;
+
+ALTER TABLE  TELEMED_only
+ADD new_date TEXT ;
+ALTER TABLE  TELEMED_only
+ADD date_ TEXT;
+ALTER TABLE  TELEMED_only
+ADD month_ TEXT;
+ALTER TABLE  TELEMED_only
+ADD year_ TEXT; 
+
+UPDATE TELEMED_only
+SET date_ = substr(date_adm,1,2);
+
+UPDATE TELEMED_only
+SET month_ = substr(date_adm,4,3);
+
+UPDATE TELEMED_only 
+SET year_ = '25' || substr(date_adm,8,2)-543 ;
+
+UPDATE TELEMED_only 
+SET new_date =  year_ || '-'|| month_ || '-' || date_ ;
+
+-- Create new_table --
+-- Change month = string to num --  
+CREATE TABLE new_table AS
+  SELECT 		
+			*,
+			CASE 
+				WHEN month_ = 'Jan'  	THEN		'01' 
+				WHEN month_ = 'Feb'  	THEN		'02' 
+				WHEN month_ = 'Mar'  	THEN		'03' 
+				WHEN month_ = 'Apr'  	THEN  	'04' 
+				WHEN month_ = 'May'  	THEN		'05' 
+				WHEN month_ = 'Jun'   THEN		'06' 
+				WHEN month_ = 'Jul' 	THEN		'07' 
+				WHEN month_ = 'Aug' 	THEN		'08' 
+				WHEN month_ = 'Sep' 	THEN		'09' 
+				WHEN month_ = 'Oct' 	THEN		'10' 
+				WHEN month_ = 'Nov' 	THEN		'11'
+				WHEN month_ = 'Dec' 	THEN		'12' 	
+				ELSE 'other'
+			END AS new_month 
+  FROM TELEMED_only ;
+
+  
+/*WITH sub AS (
+SELECT 
+			new_date,
+			date_,
+			month_,
+			year_,
+			year_ || '-' || new_month || '-' || date_ AS new_date_a
+FROM (new_table)
+) , sub2 AS (
+SELECT 	
+		new_date,
+		strftime ('%m',new_date_a)	AS month_ts	,
+		strftime ('%d',new_date_a)		AS date_ts 	,
+		strftime ('%Y',new_date_a)		AS year_ts	,
+		year_ts || '-' || month_ts || '-' || date_ts AS new_date_ts 
+FROM sub 
+)*/
+
+CREATE TABLE new_table2  AS 
+SELECT 
+			*,
+			year_ || '-' || new_month || '-' || date_ AS new_date_a
+FROM (new_table);
+
+SELECT * FROM new_table2 ; 
+
+WITH sub AS (
+SELECT 	
+		*,
+		strftime ('%m',new_date_a)	AS month_ts	,
+		strftime ('%d',new_date_a)		AS date_ts 	,
+		strftime ('%Y',new_date_a)		AS year_ts	
+FROM new_table2 
+)
+ 
+SELECT 
+		*,
+		year_ts || '-' || month_ts || '-' || date_ts AS new_date_ts 
+FROM sub 
+ORDER BY new_date_ts DESC ;
+
+CREATE TABLE new_table3 AS 
+SELECT 	
+		*,
+		strftime ('%m',new_date_a)	AS month_ts	,
+		strftime ('%d',new_date_a)		AS date_ts 	,
+		strftime ('%Y',new_date_a)		AS year_ts	
+FROM new_table2 
+
+CREATE TABLE new_table4 As 
+SELECT 
+		*,
+		year_ts || '-' || month_ts || '-' || date_ts AS new_date_ts 
+FROM new_table3 
+ORDER BY new_date_ts DESC ;
+ 
+SELECT * FROM new_table4;
+```
